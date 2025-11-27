@@ -3,11 +3,16 @@ class FrmHistoryInit {
 
     public function __construct() {
 
+        // Helpers
+        $this->include_helpers();
+
         // Trackers
         $this->include_trackers();
 
         // Admin settings
         $this->include_admin();
+
+        
         
 
         // Admin classes
@@ -38,10 +43,16 @@ class FrmHistoryInit {
 
     }
 
+    private function include_helpers() {
+        
+        require_once FRM_EH_BASE_URL.'/classes/helpers/FrmHistorySettingsHelper.php';
+
+    }
+
     private function include_admin() {
 
         require_once FRM_EH_BASE_URL.'/classes/admin/FrmHistoryAdminSettings.php';
-        
+
     }
 
     private function include_trackers() {
