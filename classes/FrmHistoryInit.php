@@ -6,13 +6,20 @@ class FrmHistoryInit {
         // Helpers
         $this->include_helpers();
 
+        // References
+        $this->include_references();
+
         // Trackers
         $this->include_trackers();
 
         // Admin settings
         $this->include_admin();
 
-        
+        // API
+        $this->include_api();
+
+        // Services
+        $this->include_services();
         
 
         // Admin classes
@@ -43,9 +50,17 @@ class FrmHistoryInit {
 
     }
 
+    private function include_api() {
+
+        require_once FRM_EH_BASE_URL.'/classes/api/FrmHistoryApiAbstract.php';
+        require_once FRM_EH_BASE_URL.'/classes/api/FrmHistoryApi.php';
+
+    }
+
     private function include_helpers() {
         
         require_once FRM_EH_BASE_URL.'/classes/helpers/FrmHistorySettingsHelper.php';
+        require_once FRM_EH_BASE_URL.'/classes/helpers/FrmHistoryFieldsHelper.php';
 
     }
 
@@ -59,6 +74,18 @@ class FrmHistoryInit {
 
         require_once FRM_EH_BASE_URL.'/classes/changeTrackers/FrmEntryChangeTracker.php';
         
+    }
+
+    private function include_references() {
+
+        require_once FRM_EH_BASE_URL.'/references.php';
+
+    }
+
+    private function include_services() {
+
+        require_once FRM_EH_BASE_URL.'/classes/services/FrmHistoryFieldsService.php';
+
     }
 
 }
