@@ -1,4 +1,5 @@
 <?php
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
@@ -8,22 +9,26 @@ class FrmHistoryAdminSettings {
     /** @var FrmHistorySettingsHelper */
     private $helper;
 
-    public function __construct() {
-        $this->helper = new FrmHistorySettingsHelper();
+    /** @var FrmHistoryReferences */
+    private $references;
 
-        add_action( 'admin_menu',        [ $this, 'register_page' ] );
-        add_action( 'admin_init',        [ $this, 'register_settings' ] );
+    public function __construct() {
+        $this->helper     = new FrmHistorySettingsHelper();
+        $this->references = new FrmHistoryReferences();
+
+        add_action( 'admin_menu', [ $this, 'register_page' ] );
+        add_action( 'admin_init', [ $this, 'register_settings' ] );
         add_action( 'wp_ajax_frm_history_verify_connection', [ $this, 'ajax_verify_connection' ] );
     }
 
     public function register_page() {
         add_submenu_page(
-            'formidable-dashboard',          // parent
-            'Entry History',                 // page title
-            'Entry History',                 // menu title
-            'manage_options',                // capability
-            'frm-history-settings',          // slug
-            [ $this, 'render_page' ]         // callback
+            'formidable',
+            'Entry History',
+            'Entry History',
+            'manage_options',
+            'frm-history-settings',
+            [ $this, 'render_page' ]
         );
     }
 
@@ -43,8 +48,8 @@ class FrmHistoryAdminSettings {
             wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'frm-history' ) );
         }
 
-        $settings    = $this->helper->get_settings();
-        $ajax_nonce  = wp_create_nonce( 'frm_history_verify_connection' );
+        $settings   = $this->helper->get_settings();
+        $ajax_nonce = wp_create_nonce( 'frm_history_verify_connection' );
         ?>
         <div class="wrap">
             <h1>Entry History</h1>
@@ -80,7 +85,7 @@ class FrmHistoryAdminSettings {
                                             placeholder="https://storage-app.example.com/api"
                                         />
                                         <p class="description">
-                                            Base API URL of the storage app (without trailing <code>/account/status</code>).
+                                            Base API URL of the storage app.
                                         </p>
                                     </td>
                                 </tr>
@@ -115,8 +120,16 @@ class FrmHistoryAdminSettings {
                                         </button>
                                         <span id="frm-history-verify-msg" class="fo-msg"></span>
                                         <p class="description">
-                                            Sends a request to <code>{API URL}/account/status</code> using the token (without saving).
+                                            Sends a request to
+                                            <code>{API URL}
+                                                <?php
+                                                $route = $this->references->getRoute( 'api_account_status' );
+                                                echo esc_html( $route ? $route['path'] : '/account/status' );
+                                                ?>
+                                            </code>.
                                         </p>
+                                        <input type="hidden" id="frm-history-verify-nonce"
+                                               value="<?php echo esc_attr( $ajax_nonce ); ?>">
                                     </td>
                                 </tr>
                             </tbody>
@@ -137,7 +150,6 @@ class FrmHistoryAdminSettings {
                 document.querySelectorAll('.fo-tab-content').forEach(function(content){
                     content.style.display = 'none';
                 });
-
                 document.querySelector('[href="#' + tabId + '"]').classList.add('nav-tab-active');
                 document.getElementById(tabId).style.display = 'block';
             }
@@ -148,6 +160,7 @@ class FrmHistoryAdminSettings {
 
                     var apiUrl = $('#frm_history_api_url').val() || '';
                     var token  = $('#frm_history_token').val() || '';
+                    var nonce  = $('#frm-history-verify-nonce').val() || '';
                     var $msg   = $('#frm-history-verify-msg');
 
                     $msg
@@ -163,10 +176,19 @@ class FrmHistoryAdminSettings {
 
                     $.post(ajaxurl, {
                         action: 'frm_history_verify_connection',
-                        nonce: '<?php echo esc_js( $ajax_nonce ); ?>',
+                        nonce: nonce,
                         api_url: apiUrl,
                         token: token
                     }).done(function(response){
+                        // Debug: log route info if present
+                        if (response && response.data) {
+                            console.log(
+                                'FrmHistory verify route:',
+                                response.data.route_key || '(no key)',
+                                response.data.route_url || '(no url)'
+                            );
+                        }
+
                         if (response && response.success) {
                             var text = response.data && response.data.message
                                 ? response.data.message
@@ -223,71 +245,113 @@ class FrmHistoryAdminSettings {
     }
 
     /**
-     * AJAX: Verify connection using POSTed api_url/token.
+     * AJAX: verify connection using FrmHistoryReferences (api_account_status).
+     * Always returns route_key and route_url in the JSON response.
      */
     public function ajax_verify_connection() {
         if ( ! current_user_can( 'manage_options' ) ) {
-            wp_send_json_error( [ 'message' => 'Permission denied.' ], 403 );
+            wp_send_json_error(
+                [
+                    'message'   => 'Permission denied.',
+                    'route_key' => 'api_account_status',
+                    'route_url' => '',
+                ],
+                403
+            );
         }
 
         check_ajax_referer( 'frm_history_verify_connection', 'nonce' );
 
-        $api_url = isset( $_POST['api_url'] ) ? esc_url_raw( trim( wp_unslash( $_POST['api_url'] ) ) ) : '';
-        $token   = isset( $_POST['token'] ) ? sanitize_text_field( wp_unslash( $_POST['token'] ) ) : '';
+        $api_url_raw = isset( $_POST['api_url'] ) ? wp_unslash( $_POST['api_url'] ) : '';
+        $token_raw   = isset( $_POST['token'] ) ? wp_unslash( $_POST['token'] ) : '';
+
+        $api_url = esc_url_raw( trim( $api_url_raw ) );
+        $token   = sanitize_text_field( $token_raw );
+
+        $route_key = 'api_account_status';
+        $route     = $this->references->getRoute( $route_key );
+
+        $method = $route && ! empty( $route['method'] ) ? $route['method'] : 'POST';
+        $path   = $route && ! empty( $route['path'] )   ? $route['path']   : '/account/status';
+
+        $base      = rtrim( (string) $api_url, '/' );
+        $route_url = $base ? $base . $path : '';
 
         if ( empty( $api_url ) ) {
-            wp_send_json_error( [ 'message' => 'API URL is required.' ], 400 );
+            wp_send_json_error(
+                [
+                    'message'   => 'API URL is required.',
+                    'route_key' => $route_key,
+                    'route_url' => $route_url,
+                ],
+                400
+            );
         }
 
-        $endpoint = trailingslashit( $api_url ) . 'account/status';
-
         $args = [
+            'method'  => strtoupper( $method ),
             'timeout' => 10,
-            'headers' => [],
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+            ],
         ];
 
         if ( ! empty( $token ) ) {
             $args['headers']['Authorization'] = 'Bearer ' . $token;
         }
 
-        $response = wp_remote_get( $endpoint, $args );
+        if ( in_array( strtoupper( $method ), [ 'POST', 'PUT', 'PATCH' ], true ) ) {
+            $args['body'] = wp_json_encode( [ 'ping' => true ] );
+        }
+
+        $response = wp_remote_request( $route_url, $args );
 
         if ( is_wp_error( $response ) ) {
-            wp_send_json_error( [
-                'message' => 'Request error: ' . $response->get_error_message(),
-            ], 500 );
+            wp_send_json_error(
+                [
+                    'message'   => 'Request error: ' . $response->get_error_message(),
+                    'route_key' => $route_key,
+                    'route_url' => $route_url,
+                ],
+                500
+            );
         }
 
-        $code = (int) wp_remote_retrieve_response_code( $response );
-        $body = wp_remote_retrieve_body( $response );
+        $code    = (int) wp_remote_retrieve_response_code( $response );
+        $body    = wp_remote_retrieve_body( $response );
+        $decoded = json_decode( $body, true );
 
         if ( $code < 200 || $code >= 300 ) {
-            wp_send_json_error( [
-                'message' => sprintf(
-                    'Remote server returned HTTP %1$d. Body: %2$s',
-                    $code,
-                    mb_substr( $body, 0, 200 )
-                ),
-            ], $code );
+            wp_send_json_error(
+                [
+                    'message'   => sprintf(
+                        'Remote server returned HTTP %1$d. Body: %2$s',
+                        $code,
+                        mb_substr( $body, 0, 200 )
+                    ),
+                    'route_key' => $route_key,
+                    'route_url' => $route_url,
+                ],
+                $code
+            );
         }
 
-        $decoded = json_decode( $body, true );
-        $status_message = '';
+        $status_message = 'Connection successful.';
 
         if ( is_array( $decoded ) && isset( $decoded['status'] ) ) {
             $status_message = 'Status: ' . (string) $decoded['status'];
         }
 
-        if ( ! $status_message ) {
-            $status_message = 'Connection successful.';
-        }
-
-        wp_send_json_success( [
-            'message' => $status_message,
-            'raw'     => $decoded,
-        ] );
+        wp_send_json_success(
+            [
+                'message'   => $status_message,
+                'raw'       => $decoded,
+                'route_key' => $route_key,
+                'route_url' => $route_url,
+            ]
+        );
     }
 }
 
-// bootstrap somewhere in your plugin:
+// Instantiate the admin settings page
 new FrmHistoryAdminSettings();
