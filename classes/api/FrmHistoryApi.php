@@ -26,18 +26,15 @@ class FrmHistoryApi extends FrmHistoryApiAbstract {
      * Update fields in the external storage.
      */
     public function updateFields( array $data ): array {
+
         return $this->requestByKey( 'update_fields', $data );
+        
     }
 
     /**
      * Update history for a specific entry.
      */
-    public function updateHistory( int $entry_id, array $data ): array {
-        $payload = [
-            'entry_id' => $entry_id,
-            'data'     => $data,
-        ];
-
+    public function updateHistory( array $payload ): array {
         return $this->requestByKey( 'update_history', $payload );
     }
 
@@ -45,10 +42,11 @@ class FrmHistoryApi extends FrmHistoryApiAbstract {
      * Get history by entry from the external storage.
      */
     public function getHistoryByEntry( int $entry_id ): array {
-        $payload = [
-            'entry_id' => $entry_id,
+
+        $params = [
+            'id' => $entry_id,        // for /{id} in URL
         ];
 
-        return $this->requestByKey( 'get_history', $payload );
+        return $this->requestByKey( 'get_history', [], $params );
     }
 }
