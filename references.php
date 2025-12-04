@@ -22,11 +22,11 @@ class FrmHistoryReferences {
             ],
             'update_history' => [
                 'method' => 'POST',
-                'path'   => '/entry-history',
+                'path'   => '/entry/history/update',
             ],
             'get_history' => [
                 'method' => 'POST',
-                'path'   => '/entry-history',
+                'path'   => '/entry/history/view/{id}',
             ],
         ];
     }
