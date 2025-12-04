@@ -114,8 +114,9 @@ abstract class FrmHistoryApiAbstract {
 
     /**
      * Helper: call by route key from FrmHistoryReferences.
+     * Supports placeholders in path: /entry/history/view/{id}
      */
-    protected function requestByKey( string $route_key, array $data = [] ): array {
+    protected function requestByKey( string $route_key, array $data = [], array $params = [] ): array {
         $route = $this->references->getRoute( $route_key );
         if ( ! $route || empty( $route['path'] ) || empty( $route['method'] ) ) {
             return [
@@ -126,8 +127,35 @@ abstract class FrmHistoryApiAbstract {
             ];
         }
 
-        return $this->doHttpRequest( $route['method'], $route['path'], $data );
+        $path = $route['path'];
+
+        // Replace placeholders from $params only
+        if (strpos($path, '{') !== false) {
+            $path = preg_replace_callback(
+                '/\{([^}]+)\}/',
+                function ($matches) use ($params) {
+                    $key = $matches[1];
+
+                    if (array_key_exists($key, $params)) {
+                        return rawurlencode((string) $params[$key]);
+                    }
+
+                    return $matches[0]; // keep placeholder unchanged
+                },
+                $path
+            );
+        }
+
+        $res = $this->doHttpRequest($route['method'], $path, $data);
+
+        if ( $res['success'] ) {
+            return $res['data'];
+        } else {
+            return $res;
+        }
+
     }
+
 
     /**
      * Public high-level sendRequest(data) to default endpoint.
