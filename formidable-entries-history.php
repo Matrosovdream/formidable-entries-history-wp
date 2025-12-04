@@ -23,14 +23,37 @@ add_action('init', 'init222');
 function init222() {
     
     if( isset( $_GET['sync'] ) ) {
-
-        $service = new FrmHistoryFieldsService();
-        $result = $service->syncFields();
-        echo '<pre>';
-        print_r( $result );
-        echo '</pre>';
-        exit;
-        
+        syncFields();
+        exit();
     }
+
+    if( isset( $_GET['history'] ) ) {
+        getEntryHistory();
+        exit();
+    }
+
+}
+
+function getEntryHistory() {
+
+    $entry_id = 15;
+
+    $service = new FrmHistoryEntryService();
+    $result = $service->getEntryHistory($entry_id);
+
+    echo '<pre>';
+    print_r( $result );
+    echo '</pre>';
+
+}    
+
+function syncFields() {
+
+    $service = new FrmHistoryFieldsService();
+    $result = $service->getEntryHistory(15);
+
+    echo '<pre>';
+    print_r( $result );
+    echo '</pre>';
 
 }
