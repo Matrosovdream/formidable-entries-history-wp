@@ -20,18 +20,13 @@ class FrmHistoryInit {
 
         // Services
         $this->include_services();
+
+        // Shortcodes
+        $this->include_shortcodes();
         
 
         // Admin classes
         /*
-        require_once FRM_EAP_BASE_URL.'/classes/admin/FrmEasypostAdminSettings.php';
-
-        // API class
-        $this->include_api();
-
-        // Shortcodes
-        $this->include_shortcodes();
-
         // Migrations
         $this->include_migrations();
 
@@ -47,6 +42,12 @@ class FrmHistoryInit {
         // Hooks
         $this->include_hooks();
         */
+
+    }
+
+    private function include_shortcodes() {
+
+        require_once FRM_EH_BASE_URL.'/shortcodes/frm-entry-history.php';
 
     }
 
@@ -85,6 +86,7 @@ class FrmHistoryInit {
     private function include_services() {
 
         require_once FRM_EH_BASE_URL.'/classes/services/FrmHistoryFieldsService.php';
+        require_once FRM_EH_BASE_URL.'/classes/services/FrmHistoryEntryService.php';
 
     }
 
