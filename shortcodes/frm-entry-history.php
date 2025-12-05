@@ -50,6 +50,10 @@ class FrmHistoryEntryShortcode {
                     padding: .75rem 1rem;
                     border-bottom: 1px solid #e5e5e5;
                     background: #f8f9fa;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: .75rem;
                 }
 
                 .frm-entry-history-card .card-body { padding: 1rem; }
@@ -80,7 +84,6 @@ class FrmHistoryEntryShortcode {
                     background: #f8f9fa;
                 }
 
-                /* Arrow column styling */
                 .frm-entry-history-arrow {
                     text-align: center !important;
                     width: 40px;
@@ -96,7 +99,6 @@ class FrmHistoryEntryShortcode {
                     font-size: .75rem;
                     font-weight: 600;
                     text-transform: uppercase;
-                    text-align: left;
                 }
 
                 .frm-entry-history-badge-create { background: #d4edda; color: #155724; }
@@ -121,6 +123,42 @@ class FrmHistoryEntryShortcode {
                     background: #fff3cd;
                     color: #856404;
                 }
+
+                .frm-history-toggle {
+                    font-size: .75rem;
+                    margin-left: .25rem;
+                    cursor: pointer;
+                    text-decoration: underline;
+                    color: #007bff;
+                }
+                .frm-history-toggle:hover {
+                    text-decoration: none;
+                }
+
+                /* Type filter tags */
+                .frm-history-type-filters {
+                    display: flex;
+                    gap: .4rem;
+                    flex-wrap: wrap;
+                    font-size: 0.8rem;
+                }
+                .frm-history-type-tag {
+                    padding: .2rem .6rem;
+                    border-radius: 999px;
+                    border: 1px solid #ced4da;
+                    cursor: pointer;
+                    background: #ffffff;
+                    color: #495057;
+                    user-select: none;
+                }
+                .frm-history-type-tag:hover {
+                    background: #e9ecef;
+                }
+                .frm-history-type-tag.active {
+                    background: #0d6efd;
+                    border-color: #0d6efd;
+                    color: #fff;
+                }
             </style>
         <?php endif; ?>
 
@@ -128,6 +166,11 @@ class FrmHistoryEntryShortcode {
             <div class="frm-entry-history-card card">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Entry #<?php echo esc_html( $entry_id ); ?></h5>
+
+                    <div class="frm-history-type-filters">
+                        <span class="frm-history-type-tag active" data-type="update">Update</span>
+                        <span class="frm-history-type-tag" data-type="create">Create</span>
+                    </div>
                 </div>
 
                 <div class="card-body">
@@ -140,12 +183,12 @@ class FrmHistoryEntryShortcode {
                         <table class="table table-sm table-striped mb-0">
                             <thead>
                                 <tr>
-                                    <th>#</th>
                                     <th>Field</th>
                                     <th>Old value</th>
-                                    <th></th> <!-- arrow -->
+                                    <th></th>
                                     <th>New value</th>
                                     <th>Type</th>
+                                    <th>User</th>
                                     <th>Date</th>
                                 </tr>
                             </thead>
@@ -156,9 +199,6 @@ class FrmHistoryEntryShortcode {
             </div>
         </div>
 
-        <!-- ============================
-             JavaScript (AJAX + Formatting)
-        =============================== -->
         <script>
         (function() {
             var containerId = <?php echo wp_json_encode( $uid ); ?>;
@@ -166,21 +206,16 @@ class FrmHistoryEntryShortcode {
             var nonce       = <?php echo wp_json_encode( $nonce ); ?>;
             var entryId     = <?php echo (int) $entry_id; ?>;
 
-            // FORMAT DATE → "12/3/2025 5:00 AM"
             function formatDateUS(dateStr) {
                 if (!dateStr) return "";
-
-                // Support "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM:SS"
                 var normalized = dateStr.replace(" ", "T");
                 var d = new Date(normalized);
-
                 if (isNaN(d.getTime())) return dateStr;
 
                 let month = d.getMonth() + 1;
                 let day   = d.getDate();
                 let year  = d.getFullYear();
-
-                let hours   = d.getHours();
+                let hours = d.getHours();
                 let minutes = d.getMinutes().toString().padStart(2, "0");
 
                 let ampm = hours >= 12 ? "PM" : "AM";
@@ -204,6 +239,56 @@ class FrmHistoryEntryShortcode {
                 emptyEl.style.display   = 'none';
                 tableWrap.style.display = 'none';
                 tbody.innerHTML = '';
+
+                // Delegated click handler: show more/less + multi-select tags
+                wrapper.addEventListener('click', function(e) {
+                    var target = e.target;
+
+                    // Show more / Show less toggle
+                    if (target.classList.contains('frm-history-toggle')) {
+                        e.preventDefault();
+                        var cell = target.closest('td');
+                        if (!cell) return;
+
+                        var shortEl = cell.querySelector('.frm-history-val-short');
+                        var fullEl  = cell.querySelector('.frm-history-val-full');
+
+                        if (!shortEl || !fullEl) return;
+
+                        var isExpanded = fullEl.style.display === 'inline';
+
+                        if (isExpanded) {
+                            fullEl.style.display  = 'none';
+                            shortEl.style.display = 'inline';
+                            target.textContent    = 'Show more';
+                        } else {
+                            fullEl.style.display  = 'inline';
+                            shortEl.style.display = 'none';
+                            target.textContent    = 'Show less';
+                        }
+                        return;
+                    }
+
+                    // Type filter tags (multi-select)
+                    if (target.classList.contains('frm-history-type-tag')) {
+                        e.preventDefault();
+
+                        // toggle this tag
+                        target.classList.toggle('active');
+
+                        // collect all active types
+                        var activeTags = wrapper.querySelectorAll('.frm-history-type-tag.active');
+                        var activeTypes = [];
+                        activeTags.forEach(function(tag) {
+                            var t = tag.getAttribute('data-type');
+                            if (t) {
+                                activeTypes.push(t);
+                            }
+                        });
+
+                        applyTypeFilter(wrapper, activeTypes);
+                    }
+                });
 
                 var formData = new FormData();
                 formData.append('action', 'frm_get_entry_history');
@@ -238,45 +323,47 @@ class FrmHistoryEntryShortcode {
                         var tr = document.createElement('tr');
 
                         var fieldId = item.field_id || '';
-                        var fieldName = '';
-
-                        // Prefer nested `field.label` / `field.name`
-                        if (item.field && (item.field.label || item.field.name)) {
-                            fieldName = item.field.label || item.field.name;
-                        } else if (item.field_name) {
-                            fieldName = item.field_name;
-                        } else {
-                            fieldName = '#' + fieldId;
-                        }
+                        var fieldName = (item.field && (item.field.label || item.field.name))
+                            ? (item.field.label || item.field.name)
+                            : (item.field_name || ('#' + fieldId));
 
                         var fieldDisplay = fieldName + (fieldId ? ' (#' + fieldId + ')' : '');
 
-                        // New structure: old_value, new_value
                         var oldVal = item.old_value || '';
                         var newVal = item.new_value || '';
 
-                        // Type badge
                         var type = item.update_type || '';
+                        tr.setAttribute('data-type', type);
+
                         var badgeClass =
                             type === 'create' ? 'frm-entry-history-badge-create' :
                             type === 'delete' ? 'frm-entry-history-badge-delete' :
                             'frm-entry-history-badge-update';
 
+                        var userName  = (item.user && (item.user.name || item.user.login)) ? (item.user.name || item.user.login) : '';
+                        var userEmail = (item.user && item.user.email) ? item.user.email : '';
+                        var userDisplay = userName
+                            ? (userEmail ? userName + ' (' + userEmail + ')' : userName)
+                            : userEmail;
+
                         var dateFormatted = formatDateUS(item.change_date);
 
                         tr.innerHTML =
-                            '<td>' + (index + 1) + '</td>' +
                             '<td>' + escapeHtml(fieldDisplay) + '</td>' +
-                            '<td>' + escapeHtml(oldVal) + '</td>' +
+                            '<td>' + formatValueCell(oldVal) + '</td>' +
                             '<td class="frm-entry-history-arrow">&rarr;</td>' +
-                            '<td>' + escapeHtml(newVal) + '</td>' +
+                            '<td>' + formatValueCell(newVal) + '</td>' +
                             '<td><span class="frm-entry-history-badge ' + badgeClass + '">' + escapeHtml(type) + '</span></td>' +
+                            '<td>' + escapeHtml(userDisplay) + '</td>' +
                             '<td>' + escapeHtml(dateFormatted) + '</td>';
 
                         tbody.appendChild(tr);
                     });
 
                     tableWrap.style.display = 'block';
+
+                    // Default filter: show only "update" (because Update tag starts as active)
+                    applyTypeFilter(wrapper, ['update']);
                 })
                 .catch(() => {
                     loadingEl.style.display = 'none';
@@ -292,6 +379,42 @@ class FrmHistoryEntryShortcode {
                         .replace(/"/g, '&quot;')
                         .replace(/'/g, '&#039;');
                 }
+
+                function formatValueCell(value) {
+                    if (!value) {
+                        return '';
+                    }
+
+                    var limit = 50;
+
+                    if (value.length <= limit) {
+                        return escapeHtml(value);
+                    }
+
+                    var shortText = value.slice(0, limit) + '...';
+
+                    return ''
+                        + '<span class="frm-history-val-short">' + escapeHtml(shortText) + '</span>'
+                        + '<span class="frm-history-val-full" style="display:none;">' + escapeHtml(value) + '</span>'
+                        + ' <a href="#" class="frm-history-toggle">Show more</a>';
+                }
+            }
+
+            function applyTypeFilter(wrapper, activeTypes) {
+                var rows = wrapper.querySelectorAll('tbody tr');
+
+                // If no active tags -> show all
+                if (!activeTypes || activeTypes.length === 0) {
+                    rows.forEach(function(row) {
+                        row.style.display = '';
+                    });
+                    return;
+                }
+
+                rows.forEach(function(row) {
+                    var rowType = row.getAttribute('data-type') || '';
+                    row.style.display = activeTypes.indexOf(rowType) !== -1 ? '' : 'none';
+                });
             }
 
             if (document.readyState !== 'loading') {
@@ -309,27 +432,26 @@ class FrmHistoryEntryShortcode {
     public function ajax_get_entry_history() {
         check_ajax_referer( 'frm_entry_history_nonce', 'nonce' );
 
-        $entry_id = intval( $_POST['entry_id'] ?? 0 );
-        if ( ! $entry_id ) {
-            wp_send_json_error( 'Missing entry_id.' );
+        $entry_id = intval($_POST['entry_id'] ?? 0);
+        if (!$entry_id) {
+            wp_send_json_error('Missing entry_id.');
         }
 
-        if ( ! class_exists( 'FrmHistoryEntryService' ) ) {
-            wp_send_json_error( 'FrmHistoryEntryService not found.' );
+        if (!class_exists('FrmHistoryEntryService')) {
+            wp_send_json_error('FrmHistoryEntryService not found.');
         }
 
         try {
             $service = new FrmHistoryEntryService();
-            $result  = $service->getEntryHistory( $entry_id );
+            $result  = $service->getEntryHistory($entry_id);
 
-            // Expecting: [ 'data' => [ 'items' => [ [ old_value, new_value, ... ], ... ] ] ]
-            wp_send_json_success( $result['data'] ?? [] );
-        } catch ( Throwable $e ) {
-            wp_send_json_error( 'Error: ' . $e->getMessage() );
+            wp_send_json_success($result['data'] ?? []);
+        } catch (Throwable $e) {
+            wp_send_json_error('Error: ' . $e->getMessage());
         }
     }
 }
 
-add_action( 'init', function () {
+add_action('init', function () {
     new FrmHistoryEntryShortcode();
-} );
+});
