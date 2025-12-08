@@ -48,6 +48,7 @@ class FrmHistoryInit {
     private function include_shortcodes() {
 
         require_once FRM_EH_BASE_URL.'/shortcodes/frm-entry-history.php';
+        require_once FRM_EH_BASE_URL.'/shortcodes/frm-history-entry-search.php';
 
     }
 
