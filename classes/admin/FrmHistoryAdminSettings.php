@@ -52,7 +52,6 @@ class FrmHistoryAdminSettings {
             wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'frm-history' ) );
         }
 
-        // Get settings (includes api_url, token, excluded_fields, active_tab)
         $settings   = $this->helper->get_settings();
         $ajax_nonce = wp_create_nonce( 'frm_history_verify_connection' );
 
@@ -63,11 +62,9 @@ class FrmHistoryAdminSettings {
         $tab_api_active   = ( 'api-connection' === $activeTab );
         $tab_field_active = ( 'field-settings' === $activeTab );
 
-        // Forms and fields
         $forms  = $this->fieldsHelper->getFormsList();
         $fields = $this->fieldsHelper->getFieldsAll( [], 'form_id' );
 
-        // [ form_id => [field_id, ...] ]
         $excluded_fields = isset( $settings['excluded_fields'] ) && is_array( $settings['excluded_fields'] )
             ? $settings['excluded_fields']
             : [];
@@ -91,7 +88,6 @@ class FrmHistoryAdminSettings {
             <form method="post" action="options.php">
                 <?php settings_fields( 'frm_history_settings_group' ); ?>
 
-                <!-- Remember last active tab -->
                 <input type="hidden"
                        id="frm_history_active_tab"
                        name="<?php echo esc_attr( FrmHistorySettingsHelper::OPTION_KEY ); ?>[active_tab]"
@@ -272,7 +268,7 @@ class FrmHistoryAdminSettings {
         <script>
             (function($){
                 $(function() {
-                    // Init Select2 for multiselect fields
+                    // Init Select2
                     if ( $.fn.select2 ) {
                         $('.frm-history-select-fields').select2({
                             width: '100%',
@@ -283,12 +279,13 @@ class FrmHistoryAdminSettings {
                         });
                     }
 
-                    // AJAX: Verify connection button
+                    // AJAX: Verify connection
                     $(document).on('click', '#frm-history-verify-btn', function(e){
                         e.preventDefault();
 
                         var apiUrl = $('#frm_history_api_url').val() || '';
-                        var token  = $('#frm_history_token').val() || '';
+                        // IMPORTANT: take live value from frm_history_storage_app[token]
+                        var token  = $('[name="<?php echo esc_js( FrmHistorySettingsHelper::OPTION_KEY ); ?>[token]"]').val() || '';
                         var nonce  = $('#frm-history-verify-nonce').val() || '';
                         var $msg   = $('#frm-history-verify-msg');
 
@@ -318,7 +315,7 @@ class FrmHistoryAdminSettings {
                             }
 
                             if (response && response.success) {
-                                var text = response.data && response.data.message
+                                var text = (response.data && response.data.message)
                                     ? response.data.message
                                     : 'Connection successful.';
                                 $msg
@@ -326,19 +323,18 @@ class FrmHistoryAdminSettings {
                                     .addClass('fo-success')
                                     .text(text);
                             } else {
-                                var err = (response && response.data && response.data.message)
-                                    ? response.data.message
-                                    : 'Connection failed.';
+                                // On any logical failure → Status: Failed
                                 $msg
                                     .removeClass('fo-success')
                                     .addClass('fo-error')
-                                    .text(err);
+                                    .text('Status: Failed');
                             }
                         }).fail(function(){
+                            // On transport failure → Status: Failed
                             $msg
                                 .removeClass('fo-success')
                                 .addClass('fo-error')
-                                .text('AJAX request failed.');
+                                .text('Status: Failed');
                         });
                     });
                 });
@@ -404,6 +400,7 @@ class FrmHistoryAdminSettings {
         $api_url_raw = isset( $_POST['api_url'] ) ? wp_unslash( $_POST['api_url'] ) : '';
         $token_raw   = isset( $_POST['token'] ) ? wp_unslash( $_POST['token'] ) : '';
 
+        // IMPORTANT: use values from POST (current form), not DB
         $api_url = esc_url_raw( trim( $api_url_raw ) );
         $token   = sanitize_text_field( $token_raw );
 
