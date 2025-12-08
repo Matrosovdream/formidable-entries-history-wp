@@ -30,7 +30,7 @@ class FrmHistoryFieldsHelper {
      *
      * @return array List of fields as associative arrays.
      */
-    public function getFieldsAll( array $filter = [] ): array {
+    public function getFieldsAll( array $filter = [], $groupBy='' ): array {
         global $wpdb;
 
         $table = $wpdb->prefix . 'frm_fields';
@@ -77,8 +77,43 @@ class FrmHistoryFieldsHelper {
             $sql = $wpdb->prepare( $sql, $params );
         }
 
-        // ARRAY_A => each row is an associative array
+        // Results
+        $res = $wpdb->get_results( $sql, ARRAY_A );
+
+        // Group results if requested
+        if ( $groupBy === 'form_id' ) {
+            $res = $this->groupByFormId( $res );
+        }
+
+        return $res;
+
+    }
+
+    public function groupByFormId( array $fields ): array {
+        $grouped = [];
+
+        foreach ( $fields as $field ) {
+            $form_id = $field['form_id'];
+            if ( ! isset( $grouped[ $form_id ] ) ) {
+                $grouped[ $form_id ] = [];
+            }
+            $grouped[ $form_id ][] = $field;
+        }
+
+        return $grouped;
+    }
+
+    public function getFormsList(): array {
+        
+        global $wpdb;
+
+        $table = $wpdb->prefix . 'frm_forms';
+
+        $sql = "SELECT id, name FROM {$table} ORDER BY name ASC";
+
+        // ARRAY_A = each row is an associative array
         return (array) $wpdb->get_results( $sql, ARRAY_A );
+
     }
 
     /**
