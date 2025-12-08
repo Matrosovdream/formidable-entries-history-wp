@@ -443,7 +443,7 @@ class FrmHistoryEntryShortcode {
 
         try {
             $service = new FrmHistoryEntryService();
-            $result  = $service->getEntryHistory($entry_id);
+            $result  = $service->getEntryHistory($entry_id, true);
 
             wp_send_json_success($result['data'] ?? []);
         } catch (Throwable $e) {
