@@ -49,4 +49,23 @@ class FrmHistoryApi extends FrmHistoryApiAbstract {
 
         return $this->requestByKey( 'get_history', [], $params );
     }
+
+    /**
+     * Email log update all
+     */
+    public function emailsLogUpdateAll( array $payload ): array {
+
+        return $this->requestByKey( 'emails_log_update_all', $payload );
+
+    }
+
+    /**
+     * Email log Get all
+     */   
+    public function getEmailLogsAll( array $payload ): array {
+
+        return $this->requestByKey( 'emails_log_list', $payload );
+
+    }        
+
 }
