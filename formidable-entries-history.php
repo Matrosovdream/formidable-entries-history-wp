@@ -32,6 +32,97 @@ function init222() {
         exit();
     }
 
+    if( isset( $_GET['update_logs_ids'] ) ) {
+        updateLogsByIds();
+        exit();
+    }
+
+    if( isset( $_GET['remove_old_logs'] ) ) {
+
+        removeOldLogs();
+        exit();
+
+    }
+
+    if( isset( $_GET['update_log_chunks'] ) ) {
+
+        updateLogChunks();
+        exit();
+
+    }
+
+    if( isset( $_GET['emails_all'] ) ) {
+
+        emailsLogAll();
+        exit();
+
+    }
+
+}
+
+function emailsLogAll() {
+
+    $payload = [
+        "filters" => [
+            "entry_id" => "",
+            "subject" => "",
+            "email_from" => "",
+            "email_to" => "",
+            "date_from" => "",
+            "date_to" => ""
+        ],
+        "paginate" => 25,
+        "sorting" => [
+            "id" => "desc"
+        ]
+    ];
+
+    $service = new FrmEmailLogService();
+    $result = $service->getEmailLogsAll($payload);
+
+    echo '<pre>';
+    print_r( $result );
+    echo '</pre>';
+
+}
+
+function removeOldLogs() {
+
+    global $wpdb;
+
+    // Remove from wp_frm_emails_log where id < some_value
+    $sql = "DELETE FROM {$wpdb->prefix}frm_emails_log WHERE id < %d LIMIT 50000";
+    $value = 3;
+    $wpdb->query( $wpdb->prepare( $sql, $value ) );
+
+    echo 'Old logs removed successfully.';
+
+}
+
+function updateLogsByIds() {
+
+    $log_ids = [3210185540, 3210161783];
+
+    $service = new FrmEmailLogService();
+    $result = $service->updateLogsByIds($log_ids);
+
+    echo '<pre>';
+    print_r( $result );
+    echo '</pre>';
+
+}
+
+function updateLogChunks() {
+
+    $chunk_size = 200;
+
+    $service = new FrmEmailLogService();
+    $result = $service->updateByChunks($chunk_size);
+
+    echo '<pre>';
+    print_r( $result );
+    echo '</pre>';
+
 }
 
 function getEntryHistory() {
