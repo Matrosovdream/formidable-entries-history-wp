@@ -23,8 +23,10 @@ class FrmHistoryInit {
 
         // Shortcodes
         $this->include_shortcodes();
-        
 
+        // CRON
+        $this->include_cron();
+        
         // Admin classes
         /*
         // Migrations
@@ -35,9 +37,6 @@ class FrmHistoryInit {
 
         // Helpers
         $this->include_helpers();
-
-        // CRON
-        $this->include_cron();
 
         // Hooks
         $this->include_hooks();
@@ -63,6 +62,7 @@ class FrmHistoryInit {
         
         require_once FRM_EH_BASE_URL.'/classes/helpers/FrmHistorySettingsHelper.php';
         require_once FRM_EH_BASE_URL.'/classes/helpers/FrmHistoryFieldsHelper.php';
+        require_once FRM_EH_BASE_URL.'/classes/helpers/FrmHistoryEmailLogHelper.php';
 
     }
 
@@ -88,6 +88,13 @@ class FrmHistoryInit {
 
         require_once FRM_EH_BASE_URL.'/classes/services/FrmHistoryFieldsService.php';
         require_once FRM_EH_BASE_URL.'/classes/services/FrmHistoryEntryService.php';
+        require_once FRM_EH_BASE_URL.'/classes/services/FrmEmailLogService.php';
+
+    }
+
+    private function include_cron() {
+
+        require_once FRM_EH_BASE_URL.'/classes/cron/FrmHistoryEmailLogCron.php';
 
     }
 
