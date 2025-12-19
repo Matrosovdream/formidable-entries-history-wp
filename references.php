@@ -28,6 +28,14 @@ class FrmHistoryReferences {
                 'method' => 'POST',
                 'path'   => '/entry/history/view/{id}',
             ],
+            'emails_log_update_all' => [
+                'method' => 'POST',
+                'path'   => '/emailslog/update-all',
+            ],
+            'emails_log_list' => [
+                'method' => 'POST',
+                'path'   => 'emailslog/list',
+            ],
         ];
     }
 
