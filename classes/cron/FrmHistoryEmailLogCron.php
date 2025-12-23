@@ -13,7 +13,7 @@ class FrmHistoryEmailLogCron {
     const DEFAULT_CHUNK_SIZE = 200;
 
     /** Default how many single events to create per dispatch run */
-    const DEFAULT_COUNT      = 30;
+    const DEFAULT_COUNT      = 5;
 
     public static function init(): void {
 
