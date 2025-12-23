@@ -8,6 +8,13 @@ class FrmEmailLogService {
     /** @var FrmHistorySettingsHelper */
     protected $settingsHelper;
 
+    protected const STATUS_MAP = [
+        0 => 'Failed',
+        1 => 'Sent',
+        2 => 'Waiting',
+        3 => 'Confirmed',
+    ];
+
     public function __construct(
         FrmHistoryApi $api = null,
         FrmHistorySettingsHelper $settingsHelper = null
@@ -21,7 +28,7 @@ class FrmEmailLogService {
     }
 
     public function getEmailLogsByEntry( int $entry_id ): array {
-        return $this->api->getEmailLogsAll( [
+        $res = $this->api->getEmailLogsAll( [
             'filters' => [
                 'entry_id' => $entry_id,
             ],
@@ -30,6 +37,21 @@ class FrmEmailLogService {
                 'date_sent' => 'DESC'
             ]
         ]);
+
+        // Map status codes to strings
+        if ( 
+            isset( $res['data']['items'] ) && 
+            is_array( $res['data']['items'] ) 
+            ) {
+            foreach ( $res['data']['items'] as &$item ) {
+                if ( isset( $item['status'] ) && array_key_exists( $item['status'], self::STATUS_MAP ) ) {
+                    $item['status'] = self::STATUS_MAP[ $item['status'] ];
+                }   
+            }
+        }
+        
+        return $res;
+
     }   
 
     public function updateAllEmailLogs( array $payload ): array {
